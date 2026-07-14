@@ -32,3 +32,8 @@ variable "subnet_id" {
   type        = string
   description = "ID da subnet para o cluster"
 }
+
+variable "enable_cilium" {
+  type        = bool
+  description = "Habilitar Cilium no cluster AKS"
+}

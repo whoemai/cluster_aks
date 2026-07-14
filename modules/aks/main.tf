@@ -18,9 +18,11 @@ resource "azurerm_kubernetes_cluster" "aks" {
   oidc_issuer_enabled = true
 
   network_profile {
-    network_plugin    = "azure"
-    network_policy    = "azure"
-    load_balancer_sku = "standard"
+    network_plugin      = "azure"
+    network_plugin_mode = var.enable_cilium ? "overlay" : null
+    network_policy      = var.enable_cilium ? "cilium" : "azure"
+    network_data_plane  = var.enable_cilium ? "cilium" : null
+    load_balancer_sku   = "standard"
   }
 
   tags = {

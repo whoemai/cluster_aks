@@ -75,3 +75,9 @@ variable "argocd_helm_values" {
   description = "Valores customizados para o Helm chart do Argo CD"
   default     = {}
 }
+
+variable "enable_cilium" {
+  type        = bool
+  description = "Define se o cluster vai utilizar o Cilium (cluster robusto) ou kube-proxy (cluster simples)"
+  default     = false
+}

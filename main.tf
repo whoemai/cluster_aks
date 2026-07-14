@@ -23,6 +23,7 @@ module "aks" {
   node_count          = var.node_count
   node_vm_size        = var.node_vm_size
   subnet_id           = module.network.subnet_id
+  enable_cilium       = var.enable_cilium
 }
 
 module "argocd" {
