@@ -15,3 +15,8 @@ variable "argocd_helm_values" {
   description = "Valores customizados para o Helm chart do Argo CD"
   default     = {}
 }
+
+variable "resource_group_name" {
+  type        = string
+  description = "Name of the resource group"
+}

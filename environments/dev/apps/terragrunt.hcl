@@ -47,7 +47,8 @@ EOF
 }
 
 inputs = {
-  enable_argocd = true
+  enable_argocd       = true
+  resource_group_name = "rg-aks-${local.env_vars.locals.environment}"
 
   argocd_helm_values = {
     server = {
