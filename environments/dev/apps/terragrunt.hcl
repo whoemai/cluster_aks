@@ -17,7 +17,7 @@ dependency "infra" {
     aks_client_key             = "bW9jaw=="
     aks_cluster_ca_certificate = "bW9jaw=="
   }
-  mock_outputs_allowed_terraform_commands = ["validate", "plan"]
+  mock_outputs_allowed_terraform_commands = ["init", "validate", "plan", "providers"]
 }
 
 generate "k8s_provider" {
