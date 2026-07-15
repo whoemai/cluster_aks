@@ -1,53 +1,64 @@
-# Terraform AKS Cluster Modularizado
+# Arquitetura Kubernetes com Terragrunt (AKS)
 
-Este projeto contém a infraestrutura como código (IaC) para criar um cluster Kubernetes no Azure (AKS) de forma modularizada e seguindo boas práticas de infraestrutura.
+Este projeto contém a infraestrutura como código (IaC) para criar um cluster Kubernetes no Azure (AKS) e instalar aplicações (como ArgoCD) de forma orquestrada, usando o **Terragrunt** para gerenciar dependências e estado de múltiplos ambientes.
+
+## Por que Terragrunt?
+No Terraform puro, criar a infraestrutura (Cluster AKS) e inicializar aplicações via Helm/Kubernetes (ArgoCD) no mesmo módulo pode gerar erros críticos durante o `terraform destroy`, exigindo scripts manuais. 
+
+O Terragrunt resolve isso separando os componentes em **micro-estados independentes** e controlando a ordem correta de execução através do bloco de `dependency`.
+
+---
 
 ## Estrutura de Arquivos
 
-*   `providers.tf`: Define os provedores necessários (`azurerm`).
-*   `variables.tf`: Define as variáveis globais de entrada.
-*   `main.tf`: Instancia os módulos principais.
-*   `outputs.tf`: Expõe os resultados gerados após a criação do cluster.
-*   `modules/`:
-    *   `resource_group/`: Módulo dedicado à criação e gestão do Grupo de Recursos.
-    *   `network/`: Módulo de infraestrutura de rede, criando uma VNet e Subnet específicas para o AKS.
-    *   `aks/`: Módulo do cluster AKS integrado à rede customizada.
+A nova estrutura adota o padrão DRY (Don't Repeat Yourself) e separa o código (módulos) dos valores de ambiente (dev, prod).
 
-## Como Utilizar
+*   `modules/`: Onde ficam os arquivos `.tf` "puros". Eles não conhecem as variáveis finais, apenas a lógica.
+    *   `infra/`: Cria o Resource Group, a Rede Virtual (VNet, Subnet) e o Cluster AKS.
+    *   `apps/`: Conecta no Cluster AKS recém-criado e instala o ArgoCD (via Helm).
+*   `environments/`: Onde nós definimos os ambientes (Dev, QA, Prod) e injetamos as variáveis.
+    *   `terragrunt.hcl`: Arquivo mestre que injeta dinamicamente o provider do Azure.
+    *   `dev/`: Pasta do ambiente de desenvolvimento.
+        *   `env.hcl`: Contém as variáveis globais (ex: nome do cluster, quantidade de nodes).
+        *   `infra/terragrunt.hcl`: Realiza o deploy da infraestrutura.
+        *   `apps/terragrunt.hcl`: Faz o deploy do ArgoCD e possui um bloco `dependency` dizendo que precisa esperar a pasta `infra` terminar.
+
+---
+
+## Como Utilizar (Orquestrando com Terragrunt)
 
 ### 1. Pré-requisitos
 *   [Terraform instalado](https://developer.hashicorp.com/terraform/downloads) na sua máquina.
+*   [Terragrunt instalado](https://terragrunt.gruntwork.io/docs/getting-started/install/).
 *   Azure CLI instalado e autenticado (`az login`).
 
-### 2. Inicializar o Terraform
-Navegue até a pasta `cluster_aks` e execute o comando abaixo. Ele baixará os provedores e inicializará a estrutura dos módulos:
+### 2. Verificar o Planejamento (Plan)
+O comando `run-all` varre todas as sub-pastas e monta o plano de execução inteiro respeitando a ordem de dependência (primeiro Infra, depois Apps).
+
 ```bash
-cd cluster_aks
-terraform init
+cd environments
+terragrunt run --all plan
 ```
 
-### 3. Verificar o Planejamento
-Veja o plano detalhado de execução (serão criados 4 recursos: RG, VNet, Subnet e AKS):
+### 3. Aplicar as Alterações (Apply)
+Para subir o ambiente inteiro de uma só vez (cluster e aplicações):
+
 ```bash
-terraform plan
+cd environments
+terragrunt run --all apply
+```
+*O Terragrunt cuidará de subir a rede, o cluster e, assim que o cluster ficar pronto, extrairá as credenciais dinamicamente para rodar o Helm do ArgoCD.*
+
+### 4. Conectar ao Cluster
+Após concluir a criação, o AKS estará disponível no seu Resource Group (definido em `environments/dev/env.hcl`):
+```bash
+# Exemplo para se conectar (Ajuste o nome do cluster e do RG conforme o env.hcl)
+az aks get-credentials --resource-group rg-aks-dev --name terragrunt-aks-dev
 ```
 
-### 4. Aplicar as Alterações (Criar os Recursos)
-Para subir o ambiente no Azure:
+### 5. Destruir os Recursos (Destroy)
+A maior vantagem da separação de estados! Para excluir **tudo** de forma segura (ele apagará os Apps primeiro, depois a Infraestrutura):
 ```bash
-terraform apply
+cd environments
+terragrunt run --all destroy
 ```
-*Digite `yes` quando solicitado para confirmar.*
-
-### 5. Conectar ao Cluster
-Após concluir, use o comando de saída (`connect_command`) para configurar o `kubectl`:
-```bash
-az aks get-credentials --resource-group $(terraform output -raw resource_group_name) --name $(terraform output -raw kubernetes_cluster_name)
-```
-
-### 6. Destruir os Recursos
-Para excluir tudo o que foi provisionado e evitar custos:
-```bash
-terraform destroy
-```
-*Digite `yes` quando solicitado para confirmar.*

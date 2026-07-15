@@ -40,3 +40,6 @@ desktop.ini
 *.sln
 *.sw?
 .terraform/
+
+# Terragrunt cache
+.terragrunt-cache
