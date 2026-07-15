@@ -4,6 +4,10 @@ include "root" {
   path = find_in_parent_folders()
 }
 
+locals {
+  env_vars = read_terragrunt_config(find_in_parent_folders("env.hcl"))
+}
+
 terraform {
   source = "../../../modules/apps"
 }
@@ -44,4 +48,24 @@ EOF
 
 inputs = {
   enable_argocd = true
+
+  argocd_helm_values = {
+    server = {
+      ingress = {
+        enabled = true
+        ingressClassName = "nginx"
+        hostname = local.env_vars.locals.argocd_domain
+        annotations = {
+          "cert-manager.io/cluster-issuer" = "letsencrypt-prod" # Ajuste se o issuer for diferente
+          "nginx.ingress.kubernetes.io/backend-protocol" = "HTTPS"
+        }
+        tls = [
+          {
+            hosts = [local.env_vars.locals.argocd_domain]
+            secretName = "argocd-tls"
+          }
+        ]
+      }
+    }
+  }
 }

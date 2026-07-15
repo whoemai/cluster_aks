@@ -21,3 +21,8 @@ output "aks_cluster_ca_certificate" {
   sensitive   = true
   description = "AKS cluster CA certificate"
 }
+
+output "aks_kubelet_identity_object_id" {
+  value       = module.aks.kubelet_identity_object_id
+  description = "Object ID of the AKS kubelet identity"
+}
